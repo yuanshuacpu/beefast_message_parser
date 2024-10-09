@@ -1,0 +1,116 @@
+cmake_minimum_required(VERSION 3.8)
+project(beefast_message_parser)
+
+set(CMAKE_BUILD_TYPE "Release")
+set(BUILD_TESTING OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(nav2_util REQUIRED)
+find_package(nav2_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(serial REQUIRED)
+find_package(beefast_serial REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(beefast_interfaces REQUIRED)
+find_package(beefast_utils REQUIRED)
+
+include_directories(
+  include
+  ${serial_INCLUDE_DIRS}
+  ${beefast_serial_INCLUDE_DIRS}
+  /usr/include/eigen3
+)
+
+set(dependencies
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  std_msgs
+  nav2_util
+  nav2_msgs
+  tf2
+  tf2_msgs
+  beefast_interfaces
+  beefast_utils
+  serial
+  beefast_serial
+)
+
+set(library_name ${PROJECT_NAME})
+set(executable_name message_parser)
+
+add_library(${library_name} SHARED
+  src/odom.cpp
+  src/message_processor.cpp
+)
+target_include_directories(${library_name} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        )
+# 在此添加您的其他依赖项
+ament_target_dependencies(${library_name}
+  serial
+  beefast_serial  
+  ${dependencies}
+)
+install(TARGETS
+  ${library_name}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+# exec
+add_executable(${executable_name} src/main.cpp)
+ament_target_dependencies(${executable_name}
+  ${dependencies}
+)
+# 链接本包内的库
+target_link_libraries(${executable_name} ${library_name} )
+install(TARGETS
+  ${executable_name}
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+set(executable_test demo)
+add_executable(${executable_test} src/test.cpp)
+ament_target_dependencies(${executable_test}
+  ${dependencies}
+)
+# 链接本包内的库
+target_link_libraries(${executable_test} ${library_name} )
+install(TARGETS
+  ${executable_test}
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY include/ DESTINATION include/)
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  # the following line skips the linter which checks for copyrights
+  # uncomment the line when a copyright and license is not present in all source files
+  #set(ament_cmake_copyright_FOUND TRUE)
+  # the following line skips cpplint (only works in a git repo)
+  # uncomment the line when this package is not in a git repo
+  #set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_export_include_directories(include)
+ament_export_libraries(${library_name})
+ament_export_dependencies(${dependencies})
+
+ament_package()
